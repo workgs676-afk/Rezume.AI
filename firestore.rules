@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Resume Validation
+    function isValidResume(data) {
+      return data.userId == request.auth.uid &&
+             data.optimizedResume is string && data.optimizedResume.size() <= 100000 &&
+             data.matchScore is number && data.matchScore >= 0 && data.matchScore <= 100 &&
+             data.createdAt == request.time;
+    }
+
+    match /resumes/{resumeId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidResume(incoming()) && isValidId(resumeId);
+      allow update: if false; // Resumes are immutable records in this app version
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // Job Application Validation
+    function isValidApplication(data) {
+      return data.userId == request.auth.uid &&
+             data.companyName is string && data.companyName.size() <= 200 &&
+             data.jobTitle is string && data.jobTitle.size() <= 200 &&
+             data.status in ['Interested', 'Applied', 'Interviewing', 'Offer', 'Rejected', 'Declined'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt == request.time;
+    }
+
+    match /applications/{applicationId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidApplication(incoming()) && isValidId(applicationId);
+      allow update: if isSignedIn() && isOwner(existing().userId) && 
+                      isValidApplication(incoming()) &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['status', 'notes', 'updatedAt']);
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+  }
+}

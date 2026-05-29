@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "Resume": {
+      "title": "Resume",
+      "description": "An optimized resume for a specific job application.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The unique ID of the user who owns this resume." },
+        "originalResume": { "type": "string", "description": "The original text provided by the user." },
+        "optimizedResume": { "type": "string", "description": "The AI-optimized version of the resume." },
+        "jobDescription": { "type": "string", "description": "The job description the resume was tailored for." },
+        "matchScore": { "type": "number", "description": "The ATS match score (0-100)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When this resume was created." }
+      },
+      "required": ["userId", "optimizedResume", "matchScore", "createdAt"]
+    },
+    "JobApplication": {
+      "title": "Job Application",
+      "description": "A tracked job application status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The unique ID of the user who owns this application tracker." },
+        "companyName": { "type": "string", "description": "Name of the company applied to." },
+        "jobTitle": { "type": "string", "description": "Title of the job role." },
+        "status": {
+          "type": "string",
+          "enum": ["Interested", "Applied", "Interviewing", "Offer", "Rejected", "Declined"],
+          "description": "Current status of the application."
+        },
+        "resumeId": { "type": "string", "description": "Optional reference to the optimized resume ID." },
+        "notes": { "type": "string", "description": "Personal notes about the application." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When this application was logged." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "When the status was last updated." }
+      },
+      "required": ["userId", "companyName", "jobTitle", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/resumes/{resumeId}": {
+      "schema": "Resume",
+      "description": "Collection of saved resumes."
+    },
+    "/applications/{applicationId}": {
+      "schema": "JobApplication",
+      "description": "Collection of job application tracking records."
+    }
+  }
+}
